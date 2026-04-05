@@ -1,156 +1,600 @@
 <!DOCTYPE html>
-
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IB Chatbot Fixed</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>IB Group Chatbot - Mobile Fixed</title>
+    <style>
+        :root {
+            --green: #2a7a3a;
+            --green-dark: #1a5227;
+            --green-light: #3da054;
+            --gold: #c9a227;
+            --cream: #f7f4ee;
+            --white: #ffffff;
+            --text-dark: #1a1a1a;
+            --text-mid: #444;
+            --text-light: #888;
+            --chat-bg: #f0f7f2;
+            --radius: 14px;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'DM Mono', monospace;
+        }
 
-<style>
-:root {
-  --green:#2a7a3a;
-  --green-light:#3da054;
-  --bg:#f0f7f2;
-}
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-*{box-sizing:border-box;margin:0;padding:0;}
+        /* KEY FIX: Use dvh (dynamic viewport height) which accounts for mobile browser chrome */
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            font-family: var(--font-body), sans-serif;
+            background: var(--green-dark);
+        }
 
-body{
-  height:100dvh;
-  font-family:sans-serif;
-  overflow:hidden;
-  background:var(--bg);
-}
+        /* FULLSCREEN PANEL */
+        #chat-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            /* KEY FIX: env() safe area insets for notch phones */
+            top: env(safe-area-inset-top);
+            bottom: env(safe-area-inset-bottom);
+            width: 100%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-/* FULLSCREEN */
-#chat-panel{
-  position:fixed;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  height:100dvh;
-  background:#fff;
-}
+        /* HEADER */
+        .chat-header {
+            background: linear-gradient(135deg, var(--green-dark), var(--green));
+            padding: 16px 20px;
+            /* Extra top padding for status bar on notch phones */
+            padding-top: calc(16px + env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
 
-/* HEADER */
-.chat-header{
-  background:var(--green);
-  color:#fff;
-  padding:15px;
-  font-weight:bold;
-}
+        .chat-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
 
-/* MESSAGES */
-#chat-messages{
-  flex:1;
-  overflow-y:auto;
-  padding:15px;
-}
+        .chat-header-info { flex: 1; }
 
-.msg{
-  margin-bottom:10px;
-}
+        .chat-header-name {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #fff;
+        }
 
-.user{text-align:right;}
-.bot{text-align:left;}
+        .chat-header-status {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 2px;
+        }
 
-.bubble{
-  display:inline-block;
-  padding:10px 14px;
-  border-radius:14px;
-  max-width:80%;
-}
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4cff85;
+            animation: statusPulse 2s ease infinite;
+            flex-shrink: 0;
+        }
 
-.user .bubble{
-  background:var(--green);
-  color:#fff;
-}
+        .chat-header-actions {
+            display: flex;
+            gap: 8px;
+        }
 
-.bot .bubble{
-  background:#eee;
-}
+        .chat-header-actions button {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
 
-/* INPUT FIX */
-.chat-input-area{
-  position:sticky;
-  bottom:0;
-  background:#fff;
-  padding:10px;
-  border-top:1px solid #ddd;
-}
+        .chat-header-actions button:hover { background: rgba(255, 255, 255, 0.25); }
 
-.chat-input-row{
-  display:flex;
-  gap:10px;
-}
+        /* MESSAGES - flex:1 so it takes all remaining space */
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 20px 16px;
+            background: linear-gradient(to bottom, #f8fbf9 0%, var(--chat-bg) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            /* Prevent content from going under input */
+            scroll-padding-bottom: 20px;
+        }
 
-#chat-input{
-  flex:1;
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #ccc;
-}
+        #chat-messages::-webkit-scrollbar { width: 3px; }
+        #chat-messages::-webkit-scrollbar-track { background: transparent; }
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(42, 122, 58, 0.3);
+            border-radius: 2px;
+        }
 
-#send-btn{
-  padding:10px 15px;
-  border:none;
-  background:var(--green);
-  color:#fff;
-  border-radius:10px;
-}
-</style>
+        .chat-date-sep {
+            text-align: center;
+            font-size: 0.72rem;
+            color: #999;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            margin: 8px 0;
+        }
 
+        /* MESSAGE BUBBLES */
+        .msg {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            animation: msgIn 0.35s ease-out both;
+            max-width: 88%;
+        }
+
+        .msg.user {
+            flex-direction: row-reverse;
+            align-self: flex-end;
+        }
+
+        .msg.bot { align-self: flex-start; }
+
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--green), var(--green-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(42, 122, 58, 0.25);
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            max-width: 100%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+        }
+
+        .msg.bot .bubble {
+            background: #fff;
+            color: var(--text-dark);
+            border-bottom-left-radius: 5px;
+        }
+
+        .msg.user .bubble {
+            background: linear-gradient(135deg, var(--green), var(--green-light));
+            color: #fff;
+            border-bottom-right-radius: 5px;
+        }
+
+        .msg-time {
+            font-size: 0.68rem;
+            opacity: 0.65;
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        /* TYPING */
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 12px 16px;
+            background: #fff;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green-light);
+            animation: typingBounce 1.4s ease infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* QUICK REPLIES */
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 4px 0 4px 42px;
+            margin-top: -6px;
+        }
+
+        .qr-btn {
+            background: #fff;
+            color: var(--green-dark);
+            border: 1.5px solid var(--green);
+            border-radius: 22px;
+            padding: 9px 16px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            min-height: 42px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .qr-btn:active {
+            background: var(--green);
+            color: #fff;
+        }
+
+        /* INPUT AREA - KEY: flex-shrink:0 + safe area bottom */
+        .chat-input-area {
+            padding: 12px 16px;
+            /* KEY FIX: Add bottom safe area for iPhone home indicator */
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            background: #fff;
+            border-top: 1px solid #eef3f0;
+            flex-shrink: 0;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            background: #f5f9f6;
+            border-radius: 22px;
+            padding: 10px 14px;
+            border: 1.5px solid transparent;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .chat-input-row:focus-within {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(42, 122, 58, 0.1);
+        }
+
+        #chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            color: var(--text-dark);
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            min-height: 22px;
+            line-height: 1.5;
+            padding: 2px 0;
+            font-family: var(--font-body), sans-serif;
+        }
+
+        #chat-input::placeholder { color: #9ca3af; }
+
+        #send-btn {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--green), var(--green-light));
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+            box-shadow: 0 3px 12px rgba(42, 122, 58, 0.3);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #send-btn:active { transform: scale(0.95); }
+
+        #send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: #fff;
+        }
+
+        /* KEYFRAMES */
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1 }
+            50% { opacity: 0.4 }
+        }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-7px); }
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* SMALL PHONE adjustments */
+        @media (max-width: 380px) {
+            .bubble { font-size: 0.92rem; padding: 11px 14px; }
+            .qr-btn { font-size: 0.84rem; padding: 8px 14px; }
+        }
+    </style>
 </head>
 
 <body>
 
-<div id="chat-panel">
+    <div id="chat-panel" role="dialog" aria-label="IB Group AI Assistant">
 
-<div class="chat-header">ABIS AI Assistant</div>
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-avatar">🌾</div>
+            <div class="chat-header-info">
+                <div class="chat-header-name">ABIS AI Assistant</div>
+                <div class="chat-header-status">
+                    <span class="status-dot"></span>
+                    Online · IB Group
+                </div>
+            </div>
+            <div class="chat-header-actions">
+                <button title="Refresh chat" onclick="clearChat()">↺</button>
+            </div>
+        </div>
 
-<div id="chat-messages"></div>
+        <!-- Messages -->
+        <div id="chat-messages">
+            <div class="chat-date-sep">Today</div>
+        </div>
 
-<div class="chat-input-area">
-  <div class="chat-input-row">
-    <input id="chat-input" placeholder="Type message...">
-    <button id="send-btn">Send</button>
-  </div>
-</div>
+        <!-- Input -->
+        <div class="chat-input-area">
+            <div class="chat-input-row">
+                <textarea id="chat-input" rows="1" placeholder="Ask about products, farming, feeds…"
+                    aria-label="Type message"></textarea>
+                <button id="send-btn" aria-label="Send">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
-</div>
+    <script>
+        const messagesEl = document.getElementById('chat-messages');
+        const inputEl = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
 
-<script>
-const input = document.getElementById("chat-input");
-const btn = document.getElementById("send-btn");
-const chat = document.getElementById("chat-messages");
+        const N8N_WEBHOOK_URL = 'https://n8n.srv965596.hstgr.cloud/webhook/67fce2a7-32dd-41a2-80c9-c77ca366e73c';
+        const SESSION_ID = 'ibg-mobile-' + Math.random().toString(36).slice(2, 10);
+        let isBotTyping = false;
 
-function addMsg(text,type){
-  const div=document.createElement("div");
-  div.className="msg "+type;
-  div.innerHTML="<div class='bubble'>"+text+"</div>";
-  chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
-}
+        const QUICK_REPLIES = [
+            'What feeds are available?',
+            'Tell me about Parivartan',
+            'Broiler nutrition guide',
+            'Contact details'
+        ];
 
-function send(){
-  const val=input.value.trim();
-  if(!val)return;
+        /* KEY FIX: Scroll to bottom when keyboard opens on mobile */
+        inputEl.addEventListener('focus', () => {
+            setTimeout(() => scrollBottom(), 350);
+        });
 
-  addMsg(val,"user");
-  input.value="";
+        /* KEY FIX: visualViewport resize = keyboard open/close */
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                scrollBottom();
+            });
+        }
 
-  setTimeout(()=>{
-    addMsg("Reply: "+val,"bot");
-  },500);
-}
+        async function sendMessage(text) {
+            const trimmed = (text || inputEl.value).trim();
+            if (!trimmed || isBotTyping) return;
 
-btn.onclick=send;
-input.onkeydown=(e)=>{
-  if(e.key==="Enter") send();
-};
+            inputEl.value = '';
+            autoResize();
+            appendUserMessage(trimmed);
+            clearQuickReplies();
 
-addMsg("Namaste 🌾 IB bot ready","bot");
-</script>
+            isBotTyping = true;
+            showTyping();
+
+            try {
+                if (N8N_WEBHOOK_URL && N8N_WEBHOOK_URL !== 'YOUR_N8N_WEBHOOK_URL_HERE') {
+                    const res = await fetch(N8N_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: trimmed, sessionId: SESSION_ID }),
+                    });
+                    const data = await res.json();
+                    hideTyping();
+                    appendBotMessage(data.response || 'Thanks for your message!');
+                } else {
+                    await sleep(1400);
+                    hideTyping();
+                    appendBotMessage(getDemoResponse(trimmed));
+                }
+            } catch {
+                hideTyping();
+                appendBotMessage('Network error. Try: poultry@ibgroup.co.in | 7610233333');
+            }
+
+            isBotTyping = false;
+        }
+
+        function getDemoResponse(q) {
+            const ql = q.toLowerCase();
+            if (ql.includes('feed') || ql.includes('broiler') || ql.includes('nutrition')) {
+                return `**Broiler Feed Guide** 🐔\n\n**Pre-Starter (0-14d):** 2950kcal | 22.5% Prot\n**Starter (15-26d):** 3050kcal | 20.5% Prot\n**Finisher (27d+):** 3150kcal | 19% Prot\n\nABIS Gold series available!`;
+            }
+            if (ql.includes('parivartan') || ql.includes('ec house')) {
+                return `**Parivartan EC House** 🏠\n✅ 2x farmer income\n✅ 25% financial support\n✅ 24/7 technical help\n\n📞 7610255555`;
+            }
+            if (ql.includes('layer') || ql.includes('egg')) {
+                return `**Layer Feed** 🥚\n**Laying Phase:** 16.5% Prot | **4.1% Calcium**\n\nCritical for strong eggshells!`;
+            }
+            if (ql.includes('contact') || ql.includes('phone')) {
+                return `**📞 Contacts**\n🐔 Poultry: 7610233333\n🏠 Parivartan: 7610255555\n✉️ mail@ibgroup.co.in`;
+            }
+            return `Namaste! 🌾 Ask about feeds, Parivartan EC House, vaccination, or contacts!`;
+        }
+
+        function appendBotMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'msg bot';
+            msg.innerHTML = `
+                <div class="msg-avatar">🌾</div>
+                <div>
+                    <div class="bubble">${formatText(text)}</div>
+                    <div class="msg-time">${getTime()}</div>
+                </div>`;
+            messagesEl.appendChild(msg);
+            scrollBottom();
+        }
+
+        function appendUserMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'msg user';
+            msg.innerHTML = `
+                <div>
+                    <div class="bubble">${escapeHtml(text)}</div>
+                    <div class="msg-time">${getTime()}</div>
+                </div>`;
+            messagesEl.appendChild(msg);
+            scrollBottom();
+        }
+
+        function showTyping() {
+            const el = document.createElement('div');
+            el.id = 'typing-msg';
+            el.className = 'msg bot';
+            el.innerHTML = `
+                <div class="msg-avatar">🌾</div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>`;
+            messagesEl.appendChild(el);
+            scrollBottom();
+        }
+
+        function hideTyping() {
+            const el = document.getElementById('typing-msg');
+            if (el) el.remove();
+        }
+
+        function showQuickReplies(items) {
+            const row = document.createElement('div');
+            row.id = 'quick-replies-row';
+            row.className = 'quick-replies';
+            items.forEach(q => {
+                const btn = document.createElement('button');
+                btn.className = 'qr-btn';
+                btn.textContent = q;
+                btn.onclick = () => { clearQuickReplies(); sendMessage(q); };
+                row.appendChild(btn);
+            });
+            messagesEl.appendChild(row);
+            scrollBottom();
+        }
+
+        function clearQuickReplies() {
+            const qr = document.getElementById('quick-replies-row');
+            if (qr) qr.remove();
+        }
+
+        function clearChat() {
+            messagesEl.innerHTML = '<div class="chat-date-sep">Today</div>';
+            init();
+        }
+
+        function formatText(t) {
+            return escapeHtml(t)
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function escapeHtml(t) {
+            const div = document.createElement('div');
+            div.textContent = t;
+            return div.innerHTML;
+        }
+
+        function getTime() {
+            return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function scrollBottom() {
+            requestAnimationFrame(() => {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            });
+        }
+
+        function autoResize() {
+            inputEl.style.height = 'auto';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+        }
+
+        inputEl.oninput = autoResize;
+        inputEl.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+        sendBtn.onclick = () => sendMessage();
+
+        function init() {
+            const welcome = `Namaste! 🌾 ABIS AI ready!\n\nI know IB Group:\n• **Feeds** (broiler/layer/Gavran/fish)\n• **Parivartan EC House**\n• **Vaccination** (in-ovo pioneer)\n• **Contacts**`;
+            appendBotMessage(welcome);
+            setTimeout(() => showQuickReplies(QUICK_REPLIES), 800);
+        }
+
+        init();
+    </script>
 
 </body>
 </html>
